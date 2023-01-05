@@ -7,7 +7,8 @@ import { Button, StyleSheet, Text, TextInput, View, Image } from 'react-native';
 
 import Anchor from "./Anchor";
 import CopyableText from "./CopyableText";
-import PunkQR from "./PunkQR";
+import QR from "./QR";
+import Scanner from "./Scanner";
 import SColumn from "./SColumn";
 import SendEth from "./SendEth";
 import WalletConnectWallet from "./WalletConnectWallet";
@@ -20,11 +21,14 @@ const QR_PERCENTAGE = 0.8;
 
 // <TextInput style={styles.input} value={toAddress ? toAddress : ""} placeholder="amount in USD"/>
 
-export default function Wallet({ wallet, chainId, viewHeight, viewWidth }) {
+export default function Wallet({ wallet, chainId, viewHeight, topBarViewHeight, viewWidth }) {
     log("Wallet");
+
     const [walletConnectError, setWalletConnectError] = useState();
     const [walletConnectErrorURL, setWalletConnectErrorURL] = useState();
     const [punkIndex, setPunkIndex] = useState();
+
+    console.log("punkIndex", punkIndex);
     
     useEffect(() => {
         setPunkIndex(calculatePunkIndex(wallet.address));
@@ -36,7 +40,7 @@ export default function Wallet({ wallet, chainId, viewHeight, viewWidth }) {
     }
 
     const qrCodeArea = 45;
-    const walletConnectArea = 10;
+    const walletConnectArea = 30;
 
     const qrCodeSize = viewHeight * qrCodeArea / 100 * QR_PERCENTAGE;
     console.log("viewHeight", viewHeight);
@@ -46,7 +50,7 @@ export default function Wallet({ wallet, chainId, viewHeight, viewWidth }) {
     return (
         <View style={{ flex: 1 }}>
             <View style={{ flex: qrCodeArea, justifyContent:"center", alignItems: "center", borderWidth: 1 }} borderColor={"white"} borderStyle={"solid"} >
-                <PunkQR
+                <QR
                     address={wallet?.address}
                     size={qrCodeSize}
                     punkIndex={punkIndex}
@@ -72,13 +76,13 @@ export default function Wallet({ wallet, chainId, viewHeight, viewWidth }) {
                 </View>
             </View>
 
-            <View style={{ flex: 10, backgroundColor: 'rgb(255,255,255)', borderWidth: 1 }} borderColor={"blue"} borderStyle={"solid"} >
+            <View style={{ flex: walletConnectArea, backgroundColor: 'rgb(255,255,255)', borderWidth: 1 }} borderColor={"blue"} borderStyle={"solid"} >
                 <WalletConnectWallet
                     chainId={chainId}
-                    scannedWalletConnectUrl={null}
                     wallet={wallet}
                     setWalletConnectError={setWalletConnectError}
                     setWalletConnectErrorURL={setWalletConnectErrorURL}
+                    topBarViewHeight={topBarViewHeight}
                 />
 
                 {walletConnectError && <>

@@ -2,53 +2,61 @@
 import useWallet from "./useWallet";
 
 import React, { useState, useEffect } from "react";
-import { Text, View , useWindowDimensions} from 'react-native';
-
+import { Text , StyleSheet} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 
-import Scanner from "./Scanner";
+import SafeApp from "./SafeApp";
 
 
-import AccountSelector from "./AccountSelector";
-import Balance from "./Balance";
-import TopBar from "./TopBar";
-import NetworkSelector from "./NetworkSelector";
-import Wallet from "./Wallet";
+import * as ScreenOrientation from 'expo-screen-orientation';
 
 const { log } = require('./LogHelper');
 
-import { NETWORKS, ROUTE_NAME_HOME, ROUTE_NAME_WALLET_CONNECT, ROUTE_NAME_WALLET_SECRETS, STORAGE_KEY_NETWORK_NAME } from "./constants";
+const { applyDefaultDesign, initDefaultDesign, getDefaultDesignMap, listKeys } = require('./DesignHelper');
 
-const {
-    getActiveAccountIndexFromStorage,
-    getAccountIndexesArrayFromStorage,
-    handleActiveAccountIndex,
-    handleAccountIndexesArray,
-    handleNetwork } = require('./AccountHelper');
+const { cleanStorage } = require('./DevHelper');
 
-// <NetworkSelector network={network} setNetwork={setNetwork} />
-// <AccountSelector activeAccountIndex={activeAccountIndex} setActiveAccountIndex={setActiveAccountIndex} accountIndexesArray={accountIndexesArray} />
+const { AccountHelper } = require('./AccountHelper');
+
+const { calculatePunkIndex } = require('./WalletHelper');
+
+ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
 
 export default function App() {
-    const { height, width } = useWindowDimensions();
+
+/* Clean AsyncStorage and SecureStore
+    useEffect(() => {
+        const clean = async () => {
+            await cleanStorage();
+        }
+
+        clean();
+    }, []);
+
+    return (
+      <>
+        <Text>Cleaning...</Text>
+      </>
+    );
+*/
 
     const [activeAccountIndex, setActiveAccountIndex] = useState(null);
     const [accountIndexesArray, setAccountIndexesArray] = useState(null);
     const [network, setNetwork] = useState(null);
 
+    let accountHelper = new AccountHelper(activeAccountIndex, setActiveAccountIndex, accountIndexesArray, setAccountIndexesArray, network, setNetwork);
+
     useEffect(() => {
-        handleNetwork(setNetwork);
+        accountHelper.handleNetwork();
     }, []);
     useEffect(() => {
-        handleActiveAccountIndex(setActiveAccountIndex);
+        accountHelper.handleActiveAccountIndex();
     }, []);
     useEffect(() => {
-        handleAccountIndexesArray(setAccountIndexesArray);
+        accountHelper.handleAccountIndexesArray();
     }, []);
 
-    const wallet = useWallet(network, activeAccountIndex);
+    const wallet = useWallet(accountHelper);
 
     const [punkIndex, setPunkIndex] = useState();
     useEffect(() => {
@@ -57,49 +65,53 @@ export default function App() {
         }
     }, [wallet]);
 
+    useEffect(() => {
+        async function handleStoredKeys() {
+           await initDefaultDesign();
+           //await listKeys();
+
+        }
+
+        handleStoredKeys();
+    }, []);
+
+
     if (!punkIndex) {
         return (
-          <SafeAreaProvider>
               <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
                   <Text>Loading</Text>
               </SafeAreaView>
-          </SafeAreaProvider>
+          
         );
     }
 
-    const barPercentage = 0.08;
-    const mainPercentage = 1 - (2 * barPercentage);
+    accountHelper.setWallet(wallet);
+    accountHelper.setPunkIndex(punkIndex);
 
+  
     return (
         <SafeAreaProvider>
             <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
-                <View style={{ flex: barPercentage, borderWidth: 1 }} borderColor={"white"} borderStyle={"solid"} >
-                    <TopBar
-                        address={wallet.address}
-                        viewHeight={height * barPercentage}
-                        viewWidth={width}
-                        punkIndex={punkIndex}
-                        activeAccountIndex={activeAccountIndex}
-                        setActiveAccountIndex={setActiveAccountIndex}
-                        accountIndexesArray={accountIndexesArray}
-                        setAccountIndexesArray={setAccountIndexesArray}
-                    />
-                </View>
-                <View style={{ flex: barPercentage, borderWidth: 1 }} borderColor={"white"} borderStyle={"solid"} >
-                    <View style={{ flex:1, flexDirection:"row"}} >
-                        <View style={{ flex:0.5}} >
-                            <Balance provider={wallet.provider} address={wallet.address} chainId={network.chainId} />
-                        </View>
-                        <View style={{ flex:0.5, justifyContent:"center"}} >
-                            <NetworkSelector network={network} setNetwork={setNetwork} />
-                        </View>
-                    </View>
-                </View>
-                <View style={{ flex: mainPercentage, borderWidth: 3 }} borderColor={"white"} borderStyle={"solid"}>
-                    <Wallet wallet={wallet} chainId={network.chainId} viewHeight={height * mainPercentage} viewWidth={width} />
-                </View>
+                <SafeApp
+                    accountHelper={accountHelper}
+                />
             </SafeAreaView>
         </SafeAreaProvider>
     );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white'
+  },
+  fixedRatio: {
+    backgroundColor: 'rebeccapurple',
+    flex: 1,
+    aspectRatio: 1
+  },
+});
 

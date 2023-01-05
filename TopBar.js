@@ -1,150 +1,96 @@
 import React, { useState, useEffect } from "react";
-import { Button, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 
-import { Ionicons } from '@expo/vector-icons';
-
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-
-import AccountSelector from "./AccountSelector";
-import WalletSecrets from "./WalletSecrets";
-
-
-const { calculatePunkIndex } = require('./WalletHelper');
+import ColorPickerSkeleton from "./ColorPickerSkeleton";
+import ColorPickerStyled from "./ColorPickerStyled";
+import ModalSkeleton from "./ModalSkeleton";
 
 const ADDRESS_SLICE = 6;
 const ICON_PERCENTAGE = 0.45;
 const FONT_PERCENTAGE = 0.8;
 
-export default function TopBar({
-        address,
-        viewHeight,
-        viewWidth,
-        punkIndex,
-        activeAccountIndex,
-        setActiveAccountIndex,
-        accountIndexesArray,
-        setAccountIndexesArray }) {
+const { storeConfig, ICON_ID_PREFIX, getStoredConfig } = require('./DesignHelper');
 
-    const styles = StyleSheet.create({
-      modalView: {
-        margin: 20,
-        marginTop: viewHeight,
-        backgroundColor: "white",
-        borderRadius: 20,
-        padding: 20,
-        alignItems: "center",
-        shadowColor: "#000",
-        shadowOffset: {
-          width: 0,
-          height: 2
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5
-      }
-    });
+export default function TopBar({ frameConstants, accountHelper }) {
+    const [color, setColor] = useState();
 
-    const [walletPushed, setWalletPushed] = useState(false);
+    const [longPressAddress, setLongPressAddress] = useState(false);
+    const [colorAddress, setColorAddress] = useState();
 
-    const handleWalletPushed = () => {
-        console.log("handleWalletPushed", walletPushed);
-        setWalletPushed(!walletPushed);
+    const storageKey = ICON_ID_PREFIX + "X"; 
+
+    useEffect(() => {
+        if (!color && !colorAddress) {
+            return;
+        }
+
+        const storageObject = {bc:color, ic:colorAddress}
+        storeConfig(storageKey, storageObject);
+    },[color, colorAddress]);
+
+    useEffect(() => {
+        async function handleStoredConfig() {
+            const storedConfig = await getStoredConfig(storageKey);
+
+            console.log("storedConfig",storageKey, storedConfig);
+
+            if (storedConfig) {
+                setColor(storedConfig.bc);
+                setColorAddress(storedConfig.ic);
+            }
+        }
+
+        handleStoredConfig();
+    }, []);
+
+    const colorPickerAddressContent = (<> 
+       <ColorPickerStyled
+           color={colorAddress}
+           setColor={setColorAddress}
+           frameConstants={frameConstants}
+       />
+    </>);
+    const handleLongPressAddress = () => {
+        setLongPressAddress(true);
     }
 
-    const iconSize = viewHeight * ICON_PERCENTAGE;
-    const fontSize = iconSize * FONT_PERCENTAGE;
+    const punkSize = frameConstants.topBarHeight * ICON_PERCENTAGE;
+    const fontSize = punkSize * FONT_PERCENTAGE;
 
-    const myText = () => (<>
-         <Modal
-            animationType="slide"
-            transparent={true}
-            
-            onRequestClose={() => {
-              //Alert.alert("Modal has been closed.");
-              //setModalVisible(!modalVisible);
-            }}
-          >
-                  <Modal
-            animationType="slide"
-            transparent={true}
-            
-            onRequestClose={() => {
-              //Alert.alert("Modal has been closed.");
-              //setModalVisible(!modalVisible);
-            }}
-          >
-            <SafeAreaProvider>
-            <SafeAreaView style={{ flex: 1 }}>
-              <View style={styles.modalView}>
-                <WalletSecrets
-                    activeAccountIndex={activeAccountIndex}
-                    setActiveAccountIndex={setActiveAccountIndex}
-                    accountIndexesArray={accountIndexesArray}
-                    setAccountIndexesArray={setAccountIndexesArray}>
-                </WalletSecrets>
+    const content = (<> 
+       <View
+           style={{ flex: 1, flexDirection: "row", alignItems:"center", justifyContent:"center", borderWidth: 0 }}
+           borderColor={"red"} borderStyle={"solid"} 
+       >
+           <Pressable
+               onLongPress={handleLongPressAddress}
+           >
+               <Text style={{fontSize: fontSize, color:colorAddress}}>
+                   {true && accountHelper.getWallet().address.slice(0, ADDRESS_SLICE)}
+               </Text>
+           </Pressable>
 
-                <Pressable style={{backgroundColor:"lightgray", alignItems:"center", justifyContent:"center"}} onPress={() => {handleWalletPushed()}}>
-                    <Text>Close</Text>
-                </Pressable>
-                
-
-              </View>
-            </SafeAreaView>
-            </SafeAreaProvider>
-           </Modal>
-
-           </Modal>
-    </>);
-
-    const styledIonicon = (name, onPressFunction) => (<>
-         <Ionicons
-             name={name}
-             size={iconSize}
-             color={"rgb(24,144,255)"}
-             onPress={
-                 () => {
-                     if (onPressFunction) {
-                         onPressFunction(true);    
-                     }
-
-                     console.log("Pressed", name, walletPushed)
-                 }
-             }/>
+            <Pressable style={{ paddingBottom: punkSize * 0.18 }}>
+                <Image
+                    style={{ width: punkSize, height: punkSize }}
+                    source={{
+                      uri: `https://www.larvalabs.com/public/images/cryptopunks/punk${accountHelper.getPunkIndex()}.png`
+                    }}
+                />
+            </Pressable>
+       </View>
     </>);
 
     return (
        <>
-           {walletPushed && myText()}
-           <View style={{ flex: 1, flexDirection: "row", alignItems:"center" }} >
-               <View style={{ flex: 0.5, flexDirection: "row", paddingLeft:iconSize}} >
-                    <AccountSelector
-                        activeAccountIndex={activeAccountIndex}
-                        setActiveAccountIndex={setActiveAccountIndex}
-                        accountIndexesArray={accountIndexesArray}
-                    />
-
-                    <Image
-                        style={{ width: iconSize, height: iconSize }}
-                        source={{
-                          uri: `https://www.larvalabs.com/public/images/cryptopunks/punk${punkIndex}.png`
-                        }}
-                    />
-
-                   <Text style={{fontSize: fontSize}}>
-                       {address.slice(0, ADDRESS_SLICE)}
-                   </Text>
-
-                   {styledIonicon("copy-outline")}
-               </View>
-               <View style={{ flex: 0.5, flexDirection: "row", justifyContent:"flex-end"}} >
-                   <View style={{ paddingRight: iconSize}}>
-                       {styledIonicon("refresh-outline")}
-                   </View>
-                   <View style={{ paddingRight: iconSize}}>
-                       {styledIonicon("wallet-outline", handleWalletPushed)}
-                   </View>
-               </View>
-           </View>
+           {longPressAddress && <ModalSkeleton content={colorPickerAddressContent} frameConstants={frameConstants} onCloseFunction={setLongPressAddress}/>}
+           <ColorPickerSkeleton
+               color={color}
+               setColor={setColor}
+               frameConstants={frameConstants}
+               content={content}
+               borderRadius={30} 
+           />
        </>
     );
 }

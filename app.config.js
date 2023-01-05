@@ -27,6 +27,7 @@ module.exports = {
       },
       "bundleIdentifier": "com.buidlguidl.scaffoldwallet",
       "icon": "./assets/icon.png",
+      "buildNumber": "2.0.0"
     }
   }
 };
